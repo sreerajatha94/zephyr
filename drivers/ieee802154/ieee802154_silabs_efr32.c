@@ -2301,6 +2301,8 @@ static net_time_t sl_802154_get_tx_time_for_csl(const struct device *dev,
 static int sl_802154_prepare_tx_frame(struct sl_802154_data *data, struct net_pkt *pkt,
 				      struct net_buf *frag, uint8_t len, net_time_t tx_time_ns)
 {
+	int ret;
+
 	memcpy(data->tx_buffer, frag->data, frag->len); /* RAIL appends FCS. */
 	sl_802154_load_mhr(data->tx_buffer, frag->len, &data->tx_mhr);
 
@@ -2314,8 +2316,18 @@ static int sl_802154_prepare_tx_frame(struct sl_802154_data *data, struct net_pk
 		return 0;
 	}
 
-	return sl_802154_security_process_tx(data, data->tx_buffer, len, &data->tx_mhr,
-					     net_pkt_ieee802154_mac_hdr_rdy(pkt));
+	ret = sl_802154_security_process_tx(data, data->tx_buffer, len, &data->tx_mhr,
+					    net_pkt_ieee802154_mac_hdr_rdy(pkt));
+	if (ret < 0) {
+		return ret;
+	}
+
+	/* Preserve the secured PSDU and updated MAC header for retransmissions. */
+	memcpy(frag->data, data->tx_buffer, frag->len);
+	net_pkt_set_ieee802154_frame_secured(pkt, true);
+	net_pkt_set_ieee802154_mac_hdr_rdy(pkt, true);
+
+	return 0;
 }
 
 static int sl_802154_write_tx_fifo(struct sl_802154_data *data, struct net_buf *frag, uint8_t len)
