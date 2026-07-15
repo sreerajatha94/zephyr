@@ -146,11 +146,15 @@ static void openthread_process(struct k_work *work)
 
 	openthread_mutex_lock();
 
-	while (otTaskletsArePending(openthread_instance)) {
-		otTaskletsProcess(openthread_instance);
-	}
+	do {
+		platformPowerProcessBegin();
 
-	otSysProcessDrivers(openthread_instance);
+		while (otTaskletsArePending(openthread_instance)) {
+			otTaskletsProcess(openthread_instance);
+		}
+
+		otSysProcessDrivers(openthread_instance);
+	} while (platformPowerHasPendingEvents(openthread_instance));
 
 	openthread_mutex_unlock();
 }
@@ -268,6 +272,7 @@ void otTaskletsSignalPending(otInstance *instance)
 
 void otSysEventSignalPending(void)
 {
+	platformPowerSignalPending();
 	otTaskletsSignalPending(NULL);
 }
 

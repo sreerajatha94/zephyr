@@ -161,6 +161,17 @@ static void reset_pending_event(enum pending_events event)
 	atomic_clear_bit(pending_events, event);
 }
 
+bool platformRadioIsPending(void)
+{
+	for (int event = 0; event < PENDING_EVENT_COUNT; event++) {
+		if (is_pending_event_set((enum pending_events)event)) {
+			return true;
+		}
+	}
+
+	return k_work_is_pending(&tx_job) || sState == OT_RADIO_STATE_TRANSMIT;
+}
+
 void energy_detected(const struct device *dev, int16_t max_ed)
 {
 	if (dev == radio_dev) {
