@@ -258,7 +258,9 @@ void handle_radio_event(const struct device *dev, enum ieee802154_event evt,
 		}
 		break;
 	case IEEE802154_EVENT_RX_OFF:
-		set_pending_event(PENDING_EVENT_SLEEP);
+		if (sState == OT_RADIO_STATE_RECEIVE) {
+			set_pending_event(PENDING_EVENT_SLEEP);
+		}
 		break;
 	default:
 		/* do nothing - ignore event */
@@ -816,12 +818,16 @@ otError otPlatRadioSleep(otInstance *aInstance)
 {
 	ARG_UNUSED(aInstance);
 
-	if (sState != OT_RADIO_STATE_SLEEP && sState != OT_RADIO_STATE_RECEIVE) {
+	if (sState == OT_RADIO_STATE_SLEEP) {
+		return OT_ERROR_NONE;
+	}
+
+	if (sState != OT_RADIO_STATE_RECEIVE) {
 		return OT_ERROR_INVALID_STATE;
 	}
 
-	radio_api->stop(radio_dev);
 	sState = OT_RADIO_STATE_SLEEP;
+	radio_api->stop(radio_dev);
 
 	return OT_ERROR_NONE;
 }
